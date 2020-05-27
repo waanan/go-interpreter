@@ -50,8 +50,8 @@ func (v *Val) GetPrettyStr() string {
 }
 
 type Env struct {
-	key string
-	val Val
+	key  string
+	val  Val
 	next *Env
 }
 
@@ -63,11 +63,11 @@ func IsEmptyEnv(env *Env) bool {
 	if env == nil {
 		return true
 	}
-	return  false
+	return false
 }
 
 func ExtendEnv(key string, val Val, env *Env) *Env {
-	return &Env{key:key,val:val,next:env}
+	return &Env{key: key, val: val, next: env}
 }
 
 func ApplyEnv(key string, env *Env) Val {
@@ -77,6 +77,6 @@ func ApplyEnv(key string, env *Env) Val {
 	if env.key == key {
 		return env.val
 	} else {
-		return  ApplyEnv(key, env.next)
+		return ApplyEnv(key, env.next)
 	}
 }
