@@ -1,5 +1,11 @@
 package main
 
+var ReserverdStr = []string{
+	"zero?", "if", "then", "else", "let", "in", "minus", "equal?",
+	"cons", "car", "cdr", "null?", "emptylist", "list", "cond", "end",
+	"unpack",
+}
+
 func IsWhiteSpace(c byte) bool {
 	if c == ' ' || c == '\t' || c == '\n' {
 		return true
@@ -16,16 +22,17 @@ func IsNum(c byte) bool {
 
 func IsOneWordReserved(c byte) bool {
 	if c == '-' || c == '(' || c == ')' ||
-		c == ',' || c == '=' {
+		c == ',' || c == '=' || c == '>' || c == '{' || c == '}' {
 		return true
 	}
 	return false
 }
 
 func IsMultiWordReserved(str string) bool {
-	if str == "zero?" || str == "if" || str == "then" ||
-		str == "else" || str == "let" || str == "in" || str == "minus" || str == "equal?"{
-		return true
+	for _, v := range ReserverdStr {
+		if v == str {
+			return true
+		}
 	}
 	return false
 }
@@ -38,7 +45,7 @@ func IsAlpha(c byte) bool {
 }
 
 func IsNoteSymbol(c byte) bool {
-	if(c == ';'){
+	if (c == ';') {
 		return true
 	}
 	return false

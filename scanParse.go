@@ -63,8 +63,17 @@ func (t *Token) GetPrettyStr() string {
 }
 
 type Scanner struct {
-	pos int
-	str string
+	pos   int
+	str   string
+	cache *Token
+}
+
+func (s *Scanner) PutBack(token Token) {
+	if s.cache == nil {
+		s.cache = &token
+	} else {
+		panic("scanner cache exist wrong")
+	}
 }
 
 func (s *Scanner) Feed(str string) {
@@ -73,6 +82,11 @@ func (s *Scanner) Feed(str string) {
 }
 
 func (s *Scanner) NextWithWhite() Token {
+	if s.cache != nil {
+		token := s.cache
+		s.cache = nil
+		return *token
+	}
 	if s.pos >= len(s.str) {
 		return Token{Type: EofToken}
 	}
@@ -177,8 +191,8 @@ type IdentifyExp struct {
 	Var string
 }
 type LetExp struct {
-	Var  string
-	Exp1 *Exp
+	Var  []string
+	Exp1 []*Exp
 	Body *Exp
 }
 type MinusExp struct {
@@ -186,6 +200,41 @@ type MinusExp struct {
 }
 
 type EqualExp struct {
+	Exp1 *Exp
+	Exp2 *Exp
+}
+
+type ConsExp struct {
+	Exp1 *Exp
+	Exp2 *Exp
+}
+
+type NullExp struct {
+	Exp1 *Exp
+}
+
+type CarExp struct {
+	Exp1 *Exp
+}
+
+type CdrExp struct {
+	Exp1 *Exp
+}
+
+type EmtyListExp struct {
+}
+
+type ListExp struct {
+	ExpList []*Exp
+}
+
+type CondExp struct {
+	ExpCond []*Exp
+	ExpBody []*Exp
+}
+
+type UnpackExp struct {
+	Vars []string
 	Exp1 *Exp
 	Exp2 *Exp
 }
@@ -248,16 +297,25 @@ func parse_exp(s *Scanner) Exp {
 		return IfExp{Exp1: &exp1, Exp2: &exp2, Exp3: &exp3}
 	}
 	if t.Type == ReservedToken && t.GetStr() == "let" {
-		t = s.Next()
-		if t.Type != IdentifierToken {
-			panic("LetExp meet no identifier")
+		str := make([]string, 0)
+		strv := make([]*Exp, 0)
+		for {
+			t = s.Next()
+			if t.Type == ReservedToken && t.GetStr() == "in" {
+				break
+			} else {
+				if t.Type != IdentifierToken {
+					panic("LetExp meet no identifier")
+				}
+				iden := t.GetStr()
+				str = append(str, iden)
+				AssertNextReservedToken(s, "LetExp", "=")
+				exp1 := parse_exp(s)
+				strv = append(strv, &exp1)
+			}
 		}
-		iden := t.GetStr()
-		AssertNextReservedToken(s, "LetExp", "=")
-		exp1 := parse_exp(s)
-		AssertNextReservedToken(s, "LetExp", "in")
 		body := parse_exp(s)
-		return LetExp{iden, &exp1, &body}
+		return LetExp{str, strv, &body}
 	}
 	if t.Type == ReservedToken && t.GetStr() == "minus" {
 		AssertNextReservedToken(s, "MinusExp", "(")
@@ -272,6 +330,101 @@ func parse_exp(s *Scanner) Exp {
 		exp2 := parse_exp(s)
 		AssertNextReservedToken(s, "EqualExp", ")")
 		return EqualExp{Exp1: &exp1, Exp2: &exp2}
+	}
+	if t.Type == ReservedToken && t.GetStr() == "null?" {
+		AssertNextReservedToken(s, "NullExp", "(")
+		exp1 := parse_exp(s)
+		AssertNextReservedToken(s, "NullExp", ")")
+		return NullExp{Exp1: &exp1}
+	}
+	if t.Type == ReservedToken && t.GetStr() == "cons" {
+		AssertNextReservedToken(s, "ConsExp", "(")
+		exp1 := parse_exp(s)
+		AssertNextReservedToken(s, "ConsExp", ",")
+		exp2 := parse_exp(s)
+		AssertNextReservedToken(s, "ConsExp", ")")
+		return ConsExp{Exp1: &exp1, Exp2: &exp2}
+	}
+	if t.Type == ReservedToken && t.GetStr() == "car" {
+		AssertNextReservedToken(s, "CarExp", "(")
+		exp1 := parse_exp(s)
+		AssertNextReservedToken(s, "CarExp", ")")
+		return CarExp{Exp1: &exp1}
+	}
+	if t.Type == ReservedToken && t.GetStr() == "cdr" {
+		AssertNextReservedToken(s, "CdrExp", "(")
+		exp1 := parse_exp(s)
+		AssertNextReservedToken(s, "CdrExp", ")")
+		return CdrExp{Exp1: &exp1}
+	}
+	if t.Type == ReservedToken && t.GetStr() == "emptylist" {
+		return EmtyListExp{}
+	}
+	// ListExp := list ( Exp1 {,Exp}* ) | list()
+	if t.Type == ReservedToken && t.GetStr() == "list" {
+		AssertNextReservedToken(s, "ListExp", "(")
+		exps := make([]*Exp, 0)
+		token := s.Next()
+		if token.Type == ReservedToken && token.GetStr() == ")" {
+			return ListExp{ExpList: exps}
+		} else {
+			s.PutBack(token)
+		}
+		exp1 := parse_exp(s)
+		exps = append(exps, &exp1)
+		for {
+			token := s.Next()
+			if token.Type == ReservedToken && token.GetStr() == ")" {
+				break
+			} else if token.Type == ReservedToken && token.GetStr() == "," {
+				exp := parse_exp(s)
+				exps = append(exps, &exp)
+			} else {
+				panic("listExp syntax wrong")
+			}
+		}
+		return ListExp{ExpList: exps}
+	}
+	if t.Type == ReservedToken && t.GetStr() == "cond" {
+		cexp := make([]*Exp, 0)
+		bexp := make([]*Exp, 0)
+		for {
+			token := s.Next()
+			if token.Type == ReservedToken && token.GetStr() == "end" {
+				break
+			} else if token.Type == ReservedToken && token.GetStr() == "{" {
+				exp := parse_exp(s)
+				cexp = append(cexp, &exp)
+				AssertNextReservedToken(s, "CondExp", ">")
+				expbody := parse_exp(s)
+				bexp = append(bexp, &expbody)
+				AssertNextReservedToken(s, "CondExp", "}")
+			} else {
+				panic("CondExp syntax wrong")
+			}
+		}
+		return CondExp{ExpCond: cexp, ExpBody: bexp}
+	}
+	if t.Type == ReservedToken && t.GetStr() == "unpack" {
+		vexp := make([]string, 0)
+		for {
+			token := s.Next()
+			if token.Type == ReservedToken && token.GetStr() == "=" {
+				break
+			} else {
+				if token.Type != IdentifierToken {
+					panic("LetExp meet no identifier")
+				}
+				vexp = append(vexp, token.GetStr())
+			}
+		}
+		exp1 := parse_exp(s)
+		token := s.Next()
+		if token.Type == ReservedToken && token.GetStr() == "in" {
+			exp2 := parse_exp(s)
+			return UnpackExp{Vars: vexp, Exp1: &exp1, Exp2: &exp2}
+		}
+		panic("unpackExp syntax wrong")
 	}
 	if t.Type == IdentifierToken {
 		return IdentifyExp{Var: t.GetStr()}
@@ -304,8 +457,8 @@ func ExpPrettyStr(exp *Exp, lvl int) string {
 		str += (*exp).(IdentifyExp).Var
 	case LetExp:
 		lexp := (*exp).(LetExp)
-		str += "\n" + white + "  " + lexp.Var
-		str += "\n" + ExpPrettyStr(lexp.Exp1, lvl+1)
+		str += "\n" + white + "  " + lexp.Var[0]
+		str += "\n" + ExpPrettyStr(lexp.Exp1[0], lvl+1)
 		str += "\n" + ExpPrettyStr(lexp.Body, lvl+1)
 	}
 	return str

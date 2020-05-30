@@ -9,6 +9,8 @@ type ValType int32
 const (
 	NumVal ValType = iota
 	BoolVal
+	PairVal
+	NullVal
 )
 
 func ValTypeToStr(vt ValType) string {
@@ -17,6 +19,10 @@ func ValTypeToStr(vt ValType) string {
 		return "NumVal"
 	case BoolVal:
 		return "BoolVal"
+	case PairVal:
+		return "PairVal"
+	case NullVal:
+		return "NullVal"
 	}
 	panic("Unknow Val Type!")
 }
@@ -25,6 +31,15 @@ type Val struct {
 	Type ValType
 	num  int
 	bool bool
+	val1 *Val
+	val2 *Val
+}
+
+func (v *Val) GetPair() (*Val, *Val) {
+	if v.Type != PairVal {
+		panic(fmt.Sprintf("Get pair from Val Fail %+v", *v))
+	}
+	return v.val1, v.val2
 }
 
 func (v *Val) GetNum() int {
@@ -44,8 +59,12 @@ func (v *Val) GetBool() bool {
 func (v *Val) GetPrettyStr() string {
 	if v.Type == NumVal {
 		return fmt.Sprintf("%s:%d", ValTypeToStr(v.Type), v.num)
-	} else {
+	} else if v.Type == BoolVal {
 		return fmt.Sprintf("%s:%t", ValTypeToStr(v.Type), v.bool)
+	} else if v.Type == PairVal {
+		return fmt.Sprintf("%s:(%s,%s)", ValTypeToStr(v.Type), v.val1.GetPrettyStr(), v.val2.GetPrettyStr())
+	} else {
+		return fmt.Sprintf("%s:null", ValTypeToStr(v.Type))
 	}
 }
 
