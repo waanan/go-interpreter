@@ -50,3 +50,12 @@ func ValueOfExp(exp *Exp, env *Env) Val{
 	}
 	panic("Unkown Exp!")
 }
+
+func CallProc(val1 Val, val2 Val) Val {
+	if val1.Type != ProcVal {
+		panic("Call proc rator not Procedure!")
+	}
+	varS, body, oldEnv := val1.GetProc()
+	newEnv := ExtendEnv(varS, val2, oldEnv)
+	return ValueOfExp(body, newEnv)
+}
