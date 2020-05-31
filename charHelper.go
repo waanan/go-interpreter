@@ -24,7 +24,7 @@ func IsOneWordReserved(c byte) bool {
 
 func IsMultiWordReserved(str string) bool {
 	if str == "zero?" || str == "if" || str == "then" ||
-		str == "else" || str == "let" || str == "in" {
+		str == "else" || str == "let" || str == "in" || str == "proc" {
 		return true
 	}
 	return false

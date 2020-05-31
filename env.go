@@ -9,6 +9,7 @@ type ValType int32
 const (
 	NumVal ValType = iota
 	BoolVal
+	ProcVal
 )
 
 func ValTypeToStr(vt ValType) string {
@@ -17,6 +18,8 @@ func ValTypeToStr(vt ValType) string {
 		return "NumVal"
 	case BoolVal:
 		return "BoolVal"
+	case ProcVal:
+		return "ProcVal"
 	}
 	panic("Unknow Val Type!")
 }
@@ -25,6 +28,10 @@ type Val struct {
 	Type ValType
 	num  int
 	bool bool
+	// use by proc
+	var_s string
+	body *Exp
+	env *Env
 }
 
 func (v *Val) GetNum() int {
@@ -41,11 +48,21 @@ func (v *Val) GetBool() bool {
 	return v.bool
 }
 
+func (v *Val) GetProc() (var_s string, exp *Exp, env *Env) {
+	if v.Type != ProcVal {
+		panic(fmt.Sprintf("Get proc from Val Fail %+v", *v))
+	}
+	return v.var_s, v.body, v.env
+}
+
 func (v *Val) GetPrettyStr() string {
 	if v.Type == NumVal {
 		return fmt.Sprintf("%s:%d", ValTypeToStr(v.Type), v.num)
-	} else {
+	} else if v.Type == BoolVal {
 		return fmt.Sprintf("%s:%t", ValTypeToStr(v.Type), v.bool)
+	} else {
+		return fmt.Sprintf("%s:[%s]\n[Body]\n%s\n{Env}%s",
+			ValTypeToStr(v.Type), v.var_s, ExpPrettyStr(v.body, 0), v.env.PrettyStr())
 	}
 }
 
@@ -79,4 +96,13 @@ func ApplyEnv(key string, env *Env) Val {
 	} else {
 		return  ApplyEnv(key, env.next)
 	}
+}
+
+func (e *Env) PrettyStr() string {
+	str := ""
+	for !IsEmptyEnv(e) {
+		str += "[" + e.key + ":" + e.val.GetPrettyStr() + "]"
+		e = e.next
+	}
+	return str
 }

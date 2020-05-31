@@ -9,10 +9,17 @@ func main() {
 	//	                   "then -(y,2) " +
 	//	                   "else let x = 5 " +
 	//	                          "in -(x,3)")
-	pStr := "let x = 7" +
-		    "in let y = 2" +
-		         "in let y = let x = -(x,1) in -(x,y)" +
-		         "in -(-(x,8),y)"
+	//p := ScanAndParse("((proc(x) proc(y) -(x,y) 2) 3)")
+	//fmt.Print(ExpPrettyStr(p.Exp1,0))
+	//pStr := "let x = 7" +
+	//	    "in let y = 2" +
+	//	         "in let y = let x = -(x,1) in -(x,y)" +
+	//	         "in -(-(x,8),y)"
+	pStr := "let x = 200" +
+		    "in let f = proc(z) -(z,x)" +
+		       "in let x = 100" +
+		          "in let g = proc(z) -(z,x)" +
+		             "in -((f 1), (g 1))"
 	v := Run(pStr)
 	fmt.Print(v.GetPrettyStr())
 }

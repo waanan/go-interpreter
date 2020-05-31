@@ -133,8 +133,8 @@ func (s *Scanner) NextWithWhite() Token {
 }
 
 func (s *Scanner) Next() Token {
-	t:= s.NextWithWhite()
-	for t.Type == WhiteSpaceToken || t.Type == NoteToken{
+	t := s.NextWithWhite()
+	for t.Type == WhiteSpaceToken || t.Type == NoteToken {
 		t = s.NextWithWhite()
 	}
 	return t
@@ -147,15 +147,17 @@ func DebugScanner(str string) {
 	t := s.NextWithWhite()
 	for t.Type != EofToken {
 		fmt.Println(t.GetPrettyStr())
-		t= s.NextWithWhite()
+		t = s.NextWithWhite()
 	}
 }
 
 type Exp interface {
 }
-func GetExpTypeName(e Exp) string{
+
+func GetExpTypeName(e Exp) string {
 	return reflect.TypeOf(e).Name()
 }
+
 type ConstExp struct {
 	Num int
 }
@@ -175,9 +177,19 @@ type IdentifyExp struct {
 	Var string
 }
 type LetExp struct {
-	Var string
+	Var  string
 	Exp1 *Exp
 	Body *Exp
+}
+
+type ProcExp struct {
+	Var  string
+	Exp1 *Exp
+}
+
+type CallExp struct {
+	Exp1 *Exp
+	Exp2 *Exp
 }
 
 type Program struct {
@@ -190,7 +202,7 @@ func parse(s *Scanner) Program {
 	if t.Type != EofToken {
 		panic("Progrom not meet EOF!")
 	}
-	return Program{Exp1:&exp}
+	return Program{Exp1: &exp}
 }
 
 func ScanAndParse(str string) *Program {
@@ -213,29 +225,29 @@ func AssertNextReservedToken(s *Scanner, exp_name string, str string) {
 func parse_exp(s *Scanner) Exp {
 	t := s.Next()
 	if t.Type == NumberToken {
-		return ConstExp{Num:t.num}
+		return ConstExp{Num: t.num}
 	}
 	if t.Type == ReservedToken && t.GetStr() == "-" {
-		AssertNextReservedToken(s, "DiffExp","(")
+		AssertNextReservedToken(s, "DiffExp", "(")
 		exp1 := parse_exp(s)
-		AssertNextReservedToken(s, "DiffExp",",")
+		AssertNextReservedToken(s, "DiffExp", ",")
 		exp2 := parse_exp(s)
-		AssertNextReservedToken(s, "DiffExp",")")
-		return DiffExp{Exp1:&exp1, Exp2:&exp2}
+		AssertNextReservedToken(s, "DiffExp", ")")
+		return DiffExp{Exp1: &exp1, Exp2: &exp2}
 	}
 	if t.Type == ReservedToken && t.GetStr() == "zero?" {
-		AssertNextReservedToken(s, "ZeroExp","(")
+		AssertNextReservedToken(s, "ZeroExp", "(")
 		exp1 := parse_exp(s)
-		AssertNextReservedToken(s, "ZeroExp",")")
-		return ZeroExp{Exp1:&exp1}
+		AssertNextReservedToken(s, "ZeroExp", ")")
+		return ZeroExp{Exp1: &exp1}
 	}
 	if t.Type == ReservedToken && t.GetStr() == "if" {
 		exp1 := parse_exp(s)
-		AssertNextReservedToken(s, "IfExp","then")
+		AssertNextReservedToken(s, "IfExp", "then")
 		exp2 := parse_exp(s)
-		AssertNextReservedToken(s, "IfExp","else")
+		AssertNextReservedToken(s, "IfExp", "else")
 		exp3 := parse_exp(s)
-		return IfExp{Exp1:&exp1,Exp2:&exp2,Exp3:&exp3}
+		return IfExp{Exp1: &exp1, Exp2: &exp2, Exp3: &exp3}
 	}
 	if t.Type == ReservedToken && t.GetStr() == "let" {
 		t = s.Next()
@@ -243,21 +255,37 @@ func parse_exp(s *Scanner) Exp {
 			panic("LetExp meet no identifier")
 		}
 		iden := t.GetStr()
-		AssertNextReservedToken(s, "LetExp","=")
+		AssertNextReservedToken(s, "LetExp", "=")
 		exp1 := parse_exp(s)
-		AssertNextReservedToken(s, "LetExp","in")
+		AssertNextReservedToken(s, "LetExp", "in")
 		body := parse_exp(s)
 		return LetExp{iden, &exp1, &body}
 	}
+	if t.Type == ReservedToken && t.GetStr() == "proc" {
+		AssertNextReservedToken(s, "ProcExp", "(")
+		t = s.Next()
+		if (t.Type != IdentifierToken) {
+			panic("Proc Not Get Identifier!")
+		}
+		AssertNextReservedToken(s, "ProcExp", ")")
+		exp1 := parse_exp(s)
+		return ProcExp{Var:t.GetStr(),Exp1:&exp1}
+	}
+	if t.Type == ReservedToken && t.GetStr() == "(" {
+		exp1 := parse_exp(s)
+		exp2 := parse_exp(s)
+		AssertNextReservedToken(s, "CallExp", ")")
+		return CallExp{Exp1:&exp1, Exp2:&exp2}
+	}
 	if t.Type == IdentifierToken {
-		return IdentifyExp{Var:t.GetStr()}
+		return IdentifyExp{Var: t.GetStr()}
 	}
 	panic("Parser Meet No Exp Avail!")
 }
 
-func ExpPrettyStr(exp *Exp, lvl int) string{
+func ExpPrettyStr(exp *Exp, lvl int) string {
 	var white string
-	for i:= 0; i<lvl;i++ {
+	for i := 0; i < lvl; i++ {
 		white = white + "  "
 	}
 	str := white + GetExpTypeName(*exp) + ":"
@@ -283,6 +311,14 @@ func ExpPrettyStr(exp *Exp, lvl int) string{
 		str += "\n" + white + "  " + lexp.Var
 		str += "\n" + ExpPrettyStr(lexp.Exp1, lvl+1)
 		str += "\n" + ExpPrettyStr(lexp.Body, lvl+1)
+	case ProcExp:
+		pexp := (*exp).(ProcExp)
+		str += " " + pexp.Var
+		str += "\n" + ExpPrettyStr(pexp.Exp1, lvl + 1)
+	case CallExp:
+		cexp:= (*exp).(CallExp)
+		str += "\n" + ExpPrettyStr(cexp.Exp1, lvl+1)
+		str += "\n" + ExpPrettyStr(cexp.Exp2, lvl+1)
 	}
 	return str
 }

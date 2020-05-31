@@ -39,6 +39,14 @@ func ValueOfExp(exp *Exp, env *Env) Val{
 			ExtendEnv(lexp.Var,
 				ValueOfExp(lexp.Exp1,env),
 				env))
+	case ProcExp:
+		pexp:= (*exp).(ProcExp)
+		return Val{Type:ProcVal,var_s:pexp.Var, body:pexp.Exp1, env:env}
+	case CallExp:
+		cexp:=(*exp).(CallExp)
+		proc := ValueOfExp(cexp.Exp1,env)
+		arg := ValueOfExp(cexp.Exp2, env)
+		return CallProc(proc, arg)
 	}
 	panic("Unkown Exp!")
 }
