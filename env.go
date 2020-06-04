@@ -29,7 +29,7 @@ type Val struct {
 	num  int
 	bool bool
 	// use by proc
-	var_s string
+	var_s []string
 	body *Exp
 	env *Env
 }
@@ -48,7 +48,7 @@ func (v *Val) GetBool() bool {
 	return v.bool
 }
 
-func (v *Val) GetProc() (var_s string, exp *Exp, env *Env) {
+func (v *Val) GetProc() (var_s []string, exp *Exp, env *Env) {
 	if v.Type != ProcVal {
 		panic(fmt.Sprintf("Get proc from Val Fail %+v", *v))
 	}

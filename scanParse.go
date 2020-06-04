@@ -63,8 +63,9 @@ func (t *Token) GetPrettyStr() string {
 }
 
 type Scanner struct {
-	pos int
-	str string
+	pos   int
+	str   string
+	cache *Token
 }
 
 func (s *Scanner) Feed(str string) {
@@ -73,6 +74,11 @@ func (s *Scanner) Feed(str string) {
 }
 
 func (s *Scanner) NextWithWhite() Token {
+	if s.cache != nil {
+		t := s.cache
+		s.cache = nil
+		return *t
+	}
 	if s.pos >= len(s.str) {
 		return Token{Type: EofToken}
 	}
@@ -140,6 +146,14 @@ func (s *Scanner) Next() Token {
 	return t
 }
 
+func (s *Scanner) PushBack(token *Token) {
+	if s.cache == nil {
+		s.cache = token
+	} else {
+		panic("scanner cache exist wrong")
+	}
+}
+
 func DebugScanner(str string) {
 	var s Scanner
 	s.Feed(str)
@@ -183,13 +197,13 @@ type LetExp struct {
 }
 
 type ProcExp struct {
-	Var  string
+	Var  []string
 	Exp1 *Exp
 }
 
 type CallExp struct {
 	Exp1 *Exp
-	Exp2 *Exp
+	Exp2 []*Exp
 }
 
 type Program struct {
@@ -267,15 +281,35 @@ func parse_exp(s *Scanner) Exp {
 		if (t.Type != IdentifierToken) {
 			panic("Proc Not Get Identifier!")
 		}
-		AssertNextReservedToken(s, "ProcExp", ")")
+		varStr := make([]string, 0)
+		varStr = append(varStr, t.GetStr())
+		for {
+			token := s.Next()
+			if token.Type == ReservedToken && token.GetStr() == ")" {
+				break
+			}
+			if (token.Type != IdentifierToken) {
+				panic("Proc Not Get Identifier!")
+			}
+			varStr = append(varStr, token.GetStr())
+		}
 		exp1 := parse_exp(s)
-		return ProcExp{Var:t.GetStr(),Exp1:&exp1}
+		return ProcExp{Var: varStr, Exp1: &exp1}
 	}
 	if t.Type == ReservedToken && t.GetStr() == "(" {
 		exp1 := parse_exp(s)
-		exp2 := parse_exp(s)
-		AssertNextReservedToken(s, "CallExp", ")")
-		return CallExp{Exp1:&exp1, Exp2:&exp2}
+		exp2Arr := make([]*Exp, 0)
+		for {
+			t := s.Next()
+			if t.Type == ReservedToken && t.GetStr() == ")" {
+				break
+			} else {
+				s.PushBack(&t)
+			}
+			exp2 := parse_exp(s)
+			exp2Arr = append(exp2Arr, &exp2)
+		}
+		return CallExp{Exp1: &exp1, Exp2: exp2Arr}
 	}
 	if t.Type == IdentifierToken {
 		return IdentifyExp{Var: t.GetStr()}
@@ -313,12 +347,12 @@ func ExpPrettyStr(exp *Exp, lvl int) string {
 		str += "\n" + ExpPrettyStr(lexp.Body, lvl+1)
 	case ProcExp:
 		pexp := (*exp).(ProcExp)
-		str += " " + pexp.Var
-		str += "\n" + ExpPrettyStr(pexp.Exp1, lvl + 1)
+		str += " " + pexp.Var[0]
+		str += "\n" + ExpPrettyStr(pexp.Exp1, lvl+1)
 	case CallExp:
-		cexp:= (*exp).(CallExp)
+		cexp := (*exp).(CallExp)
 		str += "\n" + ExpPrettyStr(cexp.Exp1, lvl+1)
-		str += "\n" + ExpPrettyStr(cexp.Exp2, lvl+1)
+		str += "\n" + ExpPrettyStr(cexp.Exp2[0], lvl+1)
 	}
 	return str
 }

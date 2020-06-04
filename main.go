@@ -15,11 +15,30 @@ func main() {
 	//	    "in let y = 2" +
 	//	         "in let y = let x = -(x,1) in -(x,y)" +
 	//	         "in -(-(x,8),y)"
-	pStr := "let x = 200" +
-		    "in let f = proc(z) -(z,x)" +
-		       "in let x = 100" +
-		          "in let g = proc(z) -(z,x)" +
-		             "in -((f 1), (g 1))"
+	//pStr := "let x = 200" +
+	//	    "in let f = proc(z y) -(z,-(x,y))" +
+	//	       "in let x = 100" +
+	//	          "in let g = proc(z) -(z,x)" +
+	//	             "in -((f 1 2), (g 1))"
+	//pStr := "let makemult = proc (maker) " +
+	//	"proc (x)" +
+	//	"if zero?(x)" +
+	//	"then 0" +
+	//	"else -(((maker maker) -(x,1)),4)" +
+	//	"in let times = proc(x) ((makemult makemult) x)" +
+	//	"in (times 3)"
+
+     pStr := "let even = proc (maker)" +
+     	"proc (x)" +
+     	"if zero?(x)" +
+     	"then 1" +
+     	"else " +
+          	"if zero?(-(x,1)) then 0 " +
+     	     "else ((maker maker) -(x,2))" +
+     	"in let event = proc(x) ((even even) x)" +
+     	"in (event 42)"
+
+
 	v := Run(pStr)
 	fmt.Print(v.GetPrettyStr())
 }
