@@ -50,17 +50,17 @@ func ValueOfExp(exp *Exp, env *Env) Val {
 			arg := ValueOfExp(v, env)
 			args = append(args, &arg)
 		}
-		return CallProc(proc, args)
+		return CallProc(proc, args, env)
 	}
 	panic("Unkown Exp!")
 }
 
-func CallProc(val1 Val, val2 []*Val) Val {
+func CallProc(val1 Val, val2 []*Val, env *Env) Val {
 	if val1.Type != ProcVal {
 		panic("Call proc rator not Procedure!")
 	}
-	varS, body, oldEnv := val1.GetProc()
-	newEnv := oldEnv
+	varS, body, _ := val1.GetProc()
+	newEnv := env
 	for i, v := range val2 {
 		newEnv = ExtendEnv(varS[i], *v, newEnv)
 	}

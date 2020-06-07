@@ -28,16 +28,24 @@ func main() {
 	//	"in let times = proc(x) ((makemult makemult) x)" +
 	//	"in (times 3)"
 
-     pStr := "let even = proc (maker)" +
-     	"proc (x)" +
-     	"if zero?(x)" +
-     	"then 1" +
-     	"else " +
-          	"if zero?(-(x,1)) then 0 " +
-     	     "else ((maker maker) -(x,2))" +
-     	"in let event = proc(x) ((even even) x)" +
-     	"in (event 42)"
-
+     //pStr := "let even = proc (maker)" +
+     //	"proc (x)" +
+     //	"if zero?(x)" +
+     //	"then 1" +
+     //	"else " +
+     //     	"if zero?(-(x,1)) then 0 " +
+     //	     "else ((maker maker) -(x,2))" +
+     //	"in let event = proc(x) ((even even) x)" +
+     //	"in (event 42)"
+     //pStr := "let a = 3" +
+     //	"     in let p = proc (x) -(x,a)" +
+     //	"         in  let a=5 " +
+     //	"              in -(a,(p 2))"
+     pStr := "let a = 3 " +
+     	"     in let p = proc (z) a" +
+     	"        in let f = proc(a) (p 0)" +
+     	"           in let a = 5" +
+     	"              in (f 2)"
 
 	v := Run(pStr)
 	fmt.Print(v.GetPrettyStr())
