@@ -182,6 +182,13 @@ type LetExp struct {
 	Body *Exp
 }
 
+type LetrecExp struct {
+	PName string
+	BVar  string
+	PBody *Exp
+	LetRecBody *Exp
+}
+
 type ProcExp struct {
 	Var  string
 	Exp1 *Exp
@@ -261,6 +268,25 @@ func parse_exp(s *Scanner) Exp {
 		body := parse_exp(s)
 		return LetExp{iden, &exp1, &body}
 	}
+	if t.Type == ReservedToken && t.GetStr() == "letrec" {
+		t = s.Next()
+		if t.Type != IdentifierToken {
+			panic("LetExp meet no identifier")
+		}
+		p_name := t.GetStr()
+		AssertNextReservedToken(s, "LetrecExp", "(")
+		t = s.Next()
+		if t.Type != IdentifierToken {
+			panic("LetExp meet no identifier")
+		}
+		b_var := t.GetStr()
+		AssertNextReservedToken(s, "LetrecExp", ")")
+		AssertNextReservedToken(s, "LetrecExp", "=")
+		p_body := parse_exp(s)
+		AssertNextReservedToken(s, "LetrecExp", "in")
+		letrec_body := parse_exp(s)
+		return LetrecExp{PName:p_name, BVar:b_var,PBody:&p_body, LetRecBody:&letrec_body}
+	}
 	if t.Type == ReservedToken && t.GetStr() == "proc" {
 		AssertNextReservedToken(s, "ProcExp", "(")
 		t = s.Next()
@@ -311,6 +337,11 @@ func ExpPrettyStr(exp *Exp, lvl int) string {
 		str += "\n" + white + "  " + lexp.Var
 		str += "\n" + ExpPrettyStr(lexp.Exp1, lvl+1)
 		str += "\n" + ExpPrettyStr(lexp.Body, lvl+1)
+	case LetrecExp:
+		lrecexp := (*exp).(LetrecExp)
+		str += "\n" + white + "  " + lrecexp.PName  + ":" + lrecexp.BVar
+		str += "\n" + ExpPrettyStr(lrecexp.PBody, lvl+1)
+		str += "\n" + ExpPrettyStr(lrecexp.LetRecBody, lvl+1)
 	case ProcExp:
 		pexp := (*exp).(ProcExp)
 		str += " " + pexp.Var

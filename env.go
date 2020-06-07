@@ -5,6 +5,7 @@ import (
 )
 
 type ValType int32
+type EnvType int32
 
 const (
 	NumVal ValType = iota
@@ -66,9 +67,19 @@ func (v *Val) GetPrettyStr() string {
 	}
 }
 
+const (
+	RegularEnv EnvType = iota
+	RecEnv
+)
+
+
 type Env struct {
+	Type EnvType
 	key string
 	val Val
+
+	Bvar string
+	Bexp *Exp
 	next *Env
 }
 
@@ -84,17 +95,29 @@ func IsEmptyEnv(env *Env) bool {
 }
 
 func ExtendEnv(key string, val Val, env *Env) *Env {
-	return &Env{key:key,val:val,next:env}
+	return &Env{key:key,val:val,next:env,Type:RegularEnv}
+}
+
+func ExtendEnvRec(key string, bvar string, bbody *Exp, env *Env) *Env {
+	return &Env{Type:RecEnv, key:key,Bvar:bvar,Bexp:bbody,next:env}
 }
 
 func ApplyEnv(key string, env *Env) Val {
 	if IsEmptyEnv(env) {
 		panic("Not found var in Env:" + key)
 	}
-	if env.key == key {
-		return env.val
-	} else {
-		return  ApplyEnv(key, env.next)
+	if env.Type == RegularEnv {
+		if env.key == key {
+			return env.val
+		} else {
+			return ApplyEnv(key, env.next)
+		}
+	} else{
+		if env.key == key {
+			return Val{Type:ProcVal,var_s:env.Bvar, body:env.Bexp, env:env}
+		} else {
+			return ApplyEnv(key, env.next)
+		}
 	}
 }
 

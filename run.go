@@ -39,6 +39,10 @@ func ValueOfExp(exp *Exp, env *Env) Val{
 			ExtendEnv(lexp.Var,
 				ValueOfExp(lexp.Exp1,env),
 				env))
+	case LetrecExp:
+		lrecexp := (*exp).(LetrecExp)
+		return ValueOfExp(lrecexp.LetRecBody, ExtendEnvRec(
+			lrecexp.PName, lrecexp.BVar, lrecexp.PBody, env))
 	case ProcExp:
 		pexp:= (*exp).(ProcExp)
 		return Val{Type:ProcVal,var_s:pexp.Var, body:pexp.Exp1, env:env}
