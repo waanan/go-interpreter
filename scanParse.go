@@ -183,9 +183,9 @@ type LetExp struct {
 }
 
 type LetrecExp struct {
-	PName string
-	BVar  string
-	PBody *Exp
+	PName      []string
+	BVar       []string
+	PBody      []*Exp
 	LetRecBody *Exp
 }
 
@@ -269,23 +269,31 @@ func parse_exp(s *Scanner) Exp {
 		return LetExp{iden, &exp1, &body}
 	}
 	if t.Type == ReservedToken && t.GetStr() == "letrec" {
-		t = s.Next()
-		if t.Type != IdentifierToken {
-			panic("LetExp meet no identifier")
+		p_name := make([]string, 0)
+		b_var := make([]string, 0)
+		p_body := make([]*Exp, 0)
+		for {
+			t = s.Next()
+			if t.Type == ReservedToken && t.GetStr() == "in" {
+				break
+			}
+			if t.Type != IdentifierToken {
+				panic("LetExp meet no identifier")
+			}
+			p_name = append(p_name, t.GetStr())
+			AssertNextReservedToken(s, "LetrecExp", "(")
+			t = s.Next()
+			if t.Type != IdentifierToken {
+				panic("LetExp meet no identifier")
+			}
+			b_var = append(b_var, t.GetStr())
+			AssertNextReservedToken(s, "LetrecExp", ")")
+			AssertNextReservedToken(s, "LetrecExp", "=")
+			tbody := parse_exp(s)
+			p_body = append(p_body, &tbody)
 		}
-		p_name := t.GetStr()
-		AssertNextReservedToken(s, "LetrecExp", "(")
-		t = s.Next()
-		if t.Type != IdentifierToken {
-			panic("LetExp meet no identifier")
-		}
-		b_var := t.GetStr()
-		AssertNextReservedToken(s, "LetrecExp", ")")
-		AssertNextReservedToken(s, "LetrecExp", "=")
-		p_body := parse_exp(s)
-		AssertNextReservedToken(s, "LetrecExp", "in")
 		letrec_body := parse_exp(s)
-		return LetrecExp{PName:p_name, BVar:b_var,PBody:&p_body, LetRecBody:&letrec_body}
+		return LetrecExp{PName: p_name, BVar: b_var, PBody: p_body, LetRecBody: &letrec_body}
 	}
 	if t.Type == ReservedToken && t.GetStr() == "proc" {
 		AssertNextReservedToken(s, "ProcExp", "(")
@@ -295,13 +303,13 @@ func parse_exp(s *Scanner) Exp {
 		}
 		AssertNextReservedToken(s, "ProcExp", ")")
 		exp1 := parse_exp(s)
-		return ProcExp{Var:t.GetStr(),Exp1:&exp1}
+		return ProcExp{Var: t.GetStr(), Exp1: &exp1}
 	}
 	if t.Type == ReservedToken && t.GetStr() == "(" {
 		exp1 := parse_exp(s)
 		exp2 := parse_exp(s)
 		AssertNextReservedToken(s, "CallExp", ")")
-		return CallExp{Exp1:&exp1, Exp2:&exp2}
+		return CallExp{Exp1: &exp1, Exp2: &exp2}
 	}
 	if t.Type == IdentifierToken {
 		return IdentifyExp{Var: t.GetStr()}
@@ -339,15 +347,15 @@ func ExpPrettyStr(exp *Exp, lvl int) string {
 		str += "\n" + ExpPrettyStr(lexp.Body, lvl+1)
 	case LetrecExp:
 		lrecexp := (*exp).(LetrecExp)
-		str += "\n" + white + "  " + lrecexp.PName  + ":" + lrecexp.BVar
-		str += "\n" + ExpPrettyStr(lrecexp.PBody, lvl+1)
+		str += "\n" + white + "  " + lrecexp.PName[0] + ":" + lrecexp.BVar[0]
+		str += "\n" + ExpPrettyStr(lrecexp.PBody[0], lvl+1)
 		str += "\n" + ExpPrettyStr(lrecexp.LetRecBody, lvl+1)
 	case ProcExp:
 		pexp := (*exp).(ProcExp)
 		str += " " + pexp.Var
-		str += "\n" + ExpPrettyStr(pexp.Exp1, lvl + 1)
+		str += "\n" + ExpPrettyStr(pexp.Exp1, lvl+1)
 	case CallExp:
-		cexp:= (*exp).(CallExp)
+		cexp := (*exp).(CallExp)
 		str += "\n" + ExpPrettyStr(cexp.Exp1, lvl+1)
 		str += "\n" + ExpPrettyStr(cexp.Exp2, lvl+1)
 	}

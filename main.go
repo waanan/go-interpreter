@@ -21,10 +21,14 @@ func main() {
 	//	       "in let x = 100" +
 	//	          "in let g = proc(z) -(z,x)" +
 	//	             "in -((f 1), (g 1))"
-	pStr := "letrec double(x) = if zero?(x) " +
-		"                       then 0 " +
-		"                       else -((double -(x,1)),2)" +
-		"    in (double 3)"
+	//pStr := "letrec double(x) = if zero?(x) " +
+	//	"                       then 0 " +
+	//	"                       else -((double -(x,1)),2)" +
+	//	"    in (double 3)"
+	pStr := "letrec" +
+		"     even(x) = if zero?(x) then 1 else (odd -(x,1))" +
+		"     odd(x) = if zero?(x) then 0 else (even -(x,1))" +
+		"    in (even 11)"
 	v := Run(pStr)
 	fmt.Print(v.GetPrettyStr())
 }

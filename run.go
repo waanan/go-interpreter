@@ -9,20 +9,20 @@ func ValueOfProgram(program *Program) Val {
 	return ValueOfExp(program.Exp1, EmptyEnv())
 }
 
-func ValueOfExp(exp *Exp, env *Env) Val{
+func ValueOfExp(exp *Exp, env *Env) Val {
 	switch (*exp).(type) {
 	case ConstExp:
-		return  Val{Type:NumVal,num:(*exp).(ConstExp).Num}
+		return Val{Type: NumVal, num: (*exp).(ConstExp).Num}
 	case DiffExp:
 		dexp := (*exp).(DiffExp)
 		v1 := ValueOfExp(dexp.Exp1, env)
 		v2 := ValueOfExp(dexp.Exp2, env)
-		return Val{Type:NumVal, num:v1.GetNum()-v2.GetNum()}
+		return Val{Type: NumVal, num: v1.GetNum() - v2.GetNum()}
 	case ZeroExp:
 		zexp := (*exp).(ZeroExp)
 		v1 := ValueOfExp(zexp.Exp1, env)
 		b := v1.GetNum() == 0
-		return  Val{Type:BoolVal,bool:b}
+		return Val{Type: BoolVal, bool: b}
 	case IfExp:
 		iexp := (*exp).(IfExp)
 		bv := ValueOfExp(iexp.Exp1, env)
@@ -37,18 +37,27 @@ func ValueOfExp(exp *Exp, env *Env) Val{
 		lexp := (*exp).(LetExp)
 		return ValueOfExp(lexp.Body,
 			ExtendEnv(lexp.Var,
-				ValueOfExp(lexp.Exp1,env),
+				ValueOfExp(lexp.Exp1, env),
 				env))
 	case LetrecExp:
 		lrecexp := (*exp).(LetrecExp)
-		return ValueOfExp(lrecexp.LetRecBody, ExtendEnvRec(
-			lrecexp.PName, lrecexp.BVar, lrecexp.PBody, env))
+		//计算最终env
+		for i := 0; i < len(lrecexp.PName); i++ {
+			valt := Val{Type:ProcVal,var_s:lrecexp.BVar[i],body:lrecexp.PBody[i]}
+			env = ExtendEnv(lrecexp.PName[i],valt,env)
+		}
+		tempEnv := env
+		for i := 0; i < len(lrecexp.PName); i++ {
+			tempEnv.val.env = env
+			tempEnv = tempEnv.next
+		}
+		return ValueOfExp(lrecexp.LetRecBody, env)
 	case ProcExp:
-		pexp:= (*exp).(ProcExp)
-		return Val{Type:ProcVal,var_s:pexp.Var, body:pexp.Exp1, env:env}
+		pexp := (*exp).(ProcExp)
+		return Val{Type: ProcVal, var_s: pexp.Var, body: pexp.Exp1, env: env}
 	case CallExp:
-		cexp:=(*exp).(CallExp)
-		proc := ValueOfExp(cexp.Exp1,env)
+		cexp := (*exp).(CallExp)
+		proc := ValueOfExp(cexp.Exp1, env)
 		arg := ValueOfExp(cexp.Exp2, env)
 		return CallProc(proc, arg)
 	}
