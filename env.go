@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 )
 
@@ -27,44 +28,38 @@ func ValTypeToStr(vt ValType) string {
 
 type Val struct {
 	Type ValType
-	num  int
-	bool bool
+	Num  int
+	Bool bool
 	// use by proc
 	var_s string
-	body *Exp
-	env *Env
+	Body *Exp
+	Env *Env
 }
 
 func (v *Val) GetNum() int {
 	if v.Type != NumVal {
 		panic(fmt.Sprintf("Get num from Val Fail %+v", *v))
 	}
-	return v.num
+	return v.Num
 }
 
 func (v *Val) GetBool() bool {
 	if v.Type != BoolVal {
 		panic(fmt.Sprintf("Get bool from Val Fail %+v", *v))
 	}
-	return v.bool
+	return v.Bool
 }
 
 func (v *Val) GetProc() (var_s string, exp *Exp, env *Env) {
 	if v.Type != ProcVal {
 		panic(fmt.Sprintf("Get proc from Val Fail %+v", *v))
 	}
-	return v.var_s, v.body, v.env
+	return v.var_s, v.Body, v.Env
 }
 
 func (v *Val) GetPrettyStr() string {
-	if v.Type == NumVal {
-		return fmt.Sprintf("%s:%d", ValTypeToStr(v.Type), v.num)
-	} else if v.Type == BoolVal {
-		return fmt.Sprintf("%s:%t", ValTypeToStr(v.Type), v.bool)
-	} else {
-		return fmt.Sprintf("%s:[%s]\n[Body]\n%s\n{Env}%s",
-			ValTypeToStr(v.Type), v.var_s, ExpPrettyStr(v.body, 0), v.env.PrettyStr())
-	}
+	b, _ :=json.MarshalIndent(v,"", "\t")
+	return string(b)
 }
 
 const (
@@ -75,8 +70,7 @@ const (
 
 type Env struct {
 	Type EnvType
-	key string
-	val Val
+	Val Val
 
 	Bvar string
 	Bexp *Exp
@@ -94,38 +88,49 @@ func IsEmptyEnv(env *Env) bool {
 	return  false
 }
 
-func ExtendEnv(key string, val Val, env *Env) *Env {
-	return &Env{key:key,val:val,next:env,Type:RegularEnv}
+func ExtendEnv(val Val, env *Env) *Env {
+	return &Env{Val:val,next:env,Type:RegularEnv}
 }
 
-func ExtendEnvRec(key string, bvar string, bbody *Exp, env *Env) *Env {
-	return &Env{Type:RecEnv, key:key,Bvar:bvar,Bexp:bbody,next:env}
+func ExtendEnvRec(bvar string, bbody *Exp, env *Env) *Env {
+	return &Env{Type:RecEnv,Bvar:bvar,Bexp:bbody,next:env}
 }
 
-func ApplyEnv(key string, env *Env) Val {
+func ApplyEnv(depth int, env *Env) Val {
 	if IsEmptyEnv(env) {
-		panic("Not found var in Env:" + key)
+		panic("Not found var in Env:" + string(depth))
 	}
-	if env.Type == RegularEnv {
-		if env.key == key {
-			return env.val
-		} else {
-			return ApplyEnv(key, env.next)
-		}
-	} else{
-		if env.key == key {
-			return Val{Type:ProcVal,var_s:env.Bvar, body:env.Bexp, env:env}
-		} else {
-			return ApplyEnv(key, env.next)
-		}
+	if depth == 0 {
+		return env.Val
+	} else {
+		return ApplyEnv(depth-1, env.next)
 	}
 }
 
-func (e *Env) PrettyStr() string {
-	str := ""
-	for !IsEmptyEnv(e) {
-		str += "[" + e.key + ":" + e.val.GetPrettyStr() + "]"
-		e = e.next
+
+type SEnv struct {
+	key string
+	next *SEnv
+}
+func EmptySEnv() *SEnv {
+	return nil
+}
+func IsEmptySEnv(env *SEnv) bool {
+	if env == nil {
+		return true
 	}
-	return str
+	return  false
+}
+func ExtendSEnv(key string, env *SEnv) *SEnv {
+	return &SEnv{key:key,next:env}
+}
+func ApplySEnv(key string, env *SEnv) int {
+	if IsEmptySEnv(env) {
+		panic("Not found var in SEnv:" + key)
+	}
+	if key == env.key {
+		return 0
+	} else {
+		return 1 + ApplySEnv(key, env.next)
+	}
 }

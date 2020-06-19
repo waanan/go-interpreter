@@ -199,6 +199,19 @@ type CallExp struct {
 	Exp2 *Exp
 }
 
+
+type NsIdentifyExp struct {
+	Depth int
+}
+type NsLetExp struct {
+	Exp1 *Exp
+	Body *Exp
+}
+type NsProcExp struct {
+	Exp1 *Exp
+}
+
+
 type Program struct {
 	Exp1 *Exp
 }

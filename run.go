@@ -6,23 +6,23 @@ func Run(str string) Val {
 }
 
 func ValueOfProgram(program *Program) Val {
-	return ValueOfExp(program.Exp1, EmptyEnv())
+	return ValueOfExp(TransOfExp(program.Exp1, EmptySEnv()), EmptyEnv())
 }
 
 func ValueOfExp(exp *Exp, env *Env) Val{
 	switch (*exp).(type) {
 	case ConstExp:
-		return  Val{Type:NumVal,num:(*exp).(ConstExp).Num}
+		return  Val{Type:NumVal,Num:(*exp).(ConstExp).Num}
 	case DiffExp:
 		dexp := (*exp).(DiffExp)
 		v1 := ValueOfExp(dexp.Exp1, env)
 		v2 := ValueOfExp(dexp.Exp2, env)
-		return Val{Type:NumVal, num:v1.GetNum()-v2.GetNum()}
+		return Val{Type:NumVal, Num:v1.GetNum()-v2.GetNum()}
 	case ZeroExp:
 		zexp := (*exp).(ZeroExp)
 		v1 := ValueOfExp(zexp.Exp1, env)
 		b := v1.GetNum() == 0
-		return  Val{Type:BoolVal,bool:b}
+		return  Val{Type:BoolVal,Bool:b}
 	case IfExp:
 		iexp := (*exp).(IfExp)
 		bv := ValueOfExp(iexp.Exp1, env)
@@ -31,21 +31,21 @@ func ValueOfExp(exp *Exp, env *Env) Val{
 		} else {
 			return ValueOfExp(iexp.Exp3, env)
 		}
-	case IdentifyExp:
-		return ApplyEnv((*exp).(IdentifyExp).Var, env)
-	case LetExp:
-		lexp := (*exp).(LetExp)
+	case NsIdentifyExp:
+		return ApplyEnv((*exp).(NsIdentifyExp).Depth, env)
+	case NsLetExp:
+		lexp := (*exp).(NsLetExp)
 		return ValueOfExp(lexp.Body,
-			ExtendEnv(lexp.Var,
+			ExtendEnv(
 				ValueOfExp(lexp.Exp1,env),
 				env))
-	case LetrecExp:
-		lrecexp := (*exp).(LetrecExp)
-		return ValueOfExp(lrecexp.LetRecBody, ExtendEnvRec(
-			lrecexp.PName, lrecexp.BVar, lrecexp.PBody, env))
-	case ProcExp:
-		pexp:= (*exp).(ProcExp)
-		return Val{Type:ProcVal,var_s:pexp.Var, body:pexp.Exp1, env:env}
+	//case LetrecExp:
+	//	lrecexp := (*exp).(LetrecExp)
+	//	return ValueOfExp(lrecexp.LetRecBody, ExtendEnvRec(
+	//		lrecexp.PName, lrecexp.BVar, lrecexp.PBody, env))
+	case NsProcExp:
+		pexp:= (*exp).(NsProcExp)
+		return Val{Type:ProcVal,var_s:"", Body:pexp.Exp1, Env:env}
 	case CallExp:
 		cexp:=(*exp).(CallExp)
 		proc := ValueOfExp(cexp.Exp1,env)
@@ -59,7 +59,50 @@ func CallProc(val1 Val, val2 Val) Val {
 	if val1.Type != ProcVal {
 		panic("Call proc rator not Procedure!")
 	}
-	varS, body, oldEnv := val1.GetProc()
-	newEnv := ExtendEnv(varS, val2, oldEnv)
+	_, body, oldEnv := val1.GetProc()
+	newEnv := ExtendEnv(val2, oldEnv)
 	return ValueOfExp(body, newEnv)
+}
+
+func TransOfExp(exp *Exp, env *SEnv) *Exp{
+	switch (*exp).(type) {
+	case ConstExp:
+		return  exp
+	case DiffExp:
+		dexp := (*exp).(DiffExp)
+		nexp := Exp(DiffExp{TransOfExp(dexp.Exp1, env), TransOfExp(dexp.Exp2,env)})
+		return &nexp
+	case ZeroExp:
+		zexp := (*exp).(ZeroExp)
+		nexp := Exp(ZeroExp{Exp1:TransOfExp(zexp.Exp1, env)})
+		return  &nexp
+	case IfExp:
+		iexp := (*exp).(IfExp)
+		nexp := Exp(IfExp{TransOfExp(iexp.Exp1,env),
+			TransOfExp(iexp.Exp2, env),
+			TransOfExp(iexp.Exp3, env)})
+		return &nexp
+	case IdentifyExp:
+		nexp := Exp(NsIdentifyExp{Depth:ApplySEnv((*exp).(IdentifyExp).Var, env)})
+		return &nexp
+	case LetExp:
+		lexp := (*exp).(LetExp)
+		nexp := Exp(NsLetExp{TransOfExp(lexp.Exp1,env),
+			TransOfExp(lexp.Body,
+				ExtendSEnv(lexp.Var, env))})
+		return &nexp
+	case ProcExp:
+		pexp:= (*exp).(ProcExp)
+		nexp := Exp(
+			NsProcExp{TransOfExp(
+				pexp.Exp1,
+				ExtendSEnv(pexp.Var, env),
+				)})
+		return &nexp
+	case CallExp:
+		cexp:=(*exp).(CallExp)
+		nexp := Exp(CallExp{TransOfExp(cexp.Exp1,env), TransOfExp(cexp.Exp2, env)})
+		return &nexp
+	}
+	panic("Unkown Exp!")
 }
