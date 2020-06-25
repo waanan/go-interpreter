@@ -210,6 +210,10 @@ type NsLetExp struct {
 type NsProcExp struct {
 	Exp1 *Exp
 }
+type NsLetRecExp struct {
+	PBody *Exp
+	LetRecBody *Exp
+}
 
 
 type Program struct {
